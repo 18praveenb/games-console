@@ -1,3 +1,4 @@
 *.gch
 *.out
 .vscode
+.DS_Store

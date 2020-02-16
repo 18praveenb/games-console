@@ -5,7 +5,7 @@
 #include <optional>
 #include <boost/range/irange.hpp>
 #include <ncurses.h>
-#include "board.hpp"
+#include "tictactoe.hpp"
 
 namespace TicTacToe {
     int int_from_digit(char digit) {
