@@ -33,9 +33,7 @@ namespace TicTacToe {
                     printw("  ");
                 }
                 if (print_active || i != active.r || j != active.c) {
-                    attron(A_BOLD);
                     printw("%c ", (*this)(Point(i, j)));
-                    attroff(A_BOLD);
                 }
             }
             printw("\n");
@@ -103,8 +101,17 @@ namespace TicTacToe {
     }
 }
 int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        std::cout << "Usage: " << argv[0] << " board_size" << std::endl;
+        return 1;
+    }
+    int dim = atoi(argv[1]);
+    if (dim <= 0) {
+        std::cout << "ERROR: Invalid board size " << argv[1];
+        return 1;
+    }
     using namespace TicTacToe;
-    Board board = Board(3);
+    Board board = Board(dim);
     Point active = Point(0, 0);
     unsigned int frame = 0;
     Player player = Player::x;
@@ -116,6 +123,7 @@ int main(int argc, char *argv[]) {
     keypad(stdscr, true);
     
     while (board.winner() == Player::empty) {
+        clear();
         std::ostringstream title_stream;
         title_stream << (char) player << " turn";
         title = title_stream.str();
@@ -163,15 +171,20 @@ int main(int argc, char *argv[]) {
         
         napms(16);
     }
-    
+
+    clear();
     std::ostringstream win_stream;
     win_stream << "Player " << (char) board.winner() << " won!";
     std::string win_message = win_stream.str();
-    mvprintw(1 + board.dim, 0, win_message.c_str());
+    printw(win_message.c_str());
+    printw("\n");
+    board.print(active, true);
+    mvprintw(1 + board.dim, 0, "Press any key to quit.");
     
     refresh();
     timeout(-1);
     getchar();
     
     endwin();
+    return 0;
 }

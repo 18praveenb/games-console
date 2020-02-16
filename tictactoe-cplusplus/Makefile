@@ -1,3 +1,2 @@
-tictactoe:
-	clang++ tictactoe.cpp -std=c++17 -lncurses
-	./a.out
+tictactoe: tictactoe.cpp tictactoe.hpp
+	clang++ -o tictactoe tictactoe.cpp -std=c++17 -lncurses
