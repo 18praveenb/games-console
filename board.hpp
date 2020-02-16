@@ -4,26 +4,33 @@
 #include <iostream>
 #include <optional>
 
-int int_from_digit(char digit);
+namespace TicTacToe {
+    int int_from_digit(char digit);
 
-struct Point {
-    public:
-        int x;
-        int y;
-        Point(int x, int y);
-        static std::optional<Point> from_string(std::string str);
-};
+    int median(int a, int b, int c);
 
-enum CellState { empty = '.', x = 'x', o = 'o' };
+    struct Point {
+        public:
+            int r, c;
+            Point(int r, int c);
+    };
 
-class Board {
-    private:
-        int dim;
-        std::vector<CellState> board;
+    std::ostream &operator<<(std::ostream &stream, const Point &point);
 
-    public:
-        Board(int dim);
-        CellState& operator()(Point p);
-        void print();
-        bool valid(Point p);
-};
+    enum Player {
+        empty = '.', x = 'x', o = 'o'
+    };
+
+    class Board {
+        public:
+            int dim;
+            std::vector<Player> board;
+            Board(int dim);
+            Player& operator()(Point p);
+            void print(Point active, bool print_active);
+            bool valid(Point p);
+            Player winner();
+            bool won(Player player);
+            Point clamp(Point p);
+    };
+}

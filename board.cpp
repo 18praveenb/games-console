@@ -5,140 +5,173 @@
 #include <optional>
 #include <boost/range/irange.hpp>
 #include <ncurses.h>
-#include <chrono>
-#include <thread>
 #include "board.hpp"
 
-int int_from_digit(char digit) {
-    return (int) (digit - '0');
-}
+namespace TicTacToe {
+    int int_from_digit(char digit) {
+        return (int) (digit - '0');
+    }
 
-Point::Point(int x, int y):
-    x {x},
-    y {y}
-    {};
+    Point::Point(int r, int c): r {r}, c {c} {};
 
-std::optional<Point> Point::from_string(std::string str) {
-    std::istringstream stream = std::istringstream(str);
-    int x, y, mode = 0;
-    while (stream.good()) {
-        if (std::isdigit(stream.peek())) {
-            switch (mode) {
-                case 0:
-                    x = int_from_digit(stream.get());
-                    mode += 1;
-                    break;
-                case 1:
-                    x = 10*x + int_from_digit(stream.get());
-                    break;
-                case 2:
-                    y = int_from_digit(stream.get());;
-                    mode += 1;
-                    break;
-                case 3:
-                    y = 10*y + int_from_digit(stream.get());
-                    break;
+    std::ostream &operator<<(std::ostream &stream, const Point &point) {
+        return stream << "(" << point.r << ", " << point.c << ")";
+    }
+
+    Board::Board(int dim):
+        dim {dim},
+        board {std::vector(dim*dim, Player::empty)} {};
+
+    Player& Board::operator()(Point p) {
+        return board[p.r + dim * p.c]; 
+    }
+
+    void Board::print(Point active, bool print_active) {
+        for(int i : boost::irange(0, dim)) {
+            for (int j : boost::irange(0, dim)) {
+                if (!print_active && i == active.r && j == active.c) {
+                    printw("  ");
+                }
+                if (print_active || i != active.r || j != active.c) {
+                    attron(A_BOLD);
+                    printw("%c ", (*this)(Point(i, j)));
+                    attroff(A_BOLD);
+                }
             }
+            printw("\n");
+        }
+    }
+
+    Player Board::winner() {
+        if (this->won(Player::x)) {
+            return Player::x;
+        } else if (this->won(Player::o)) {
+            return Player::o;
         } else {
-            switch (mode) {
-                case 0:
-                    stream.ignore();
-                    break;
-                case 1:
-                    stream.ignore();
-                    mode += 1;
-                    break;
-                case 2:
-                    stream.ignore();
-                    break;
-                case 3:
-                    return std::optional<Point>(Point(x, y));
+            return Player::empty;
+        }
+    }
+
+    bool Board::won(Player player) {
+        // Verticals
+        for (int c : boost::irange(0, dim)) {
+            bool won_column = true;
+            for (int r : boost::irange(0, dim)) {
+                if ((*this)(Point(r, c)) != player) {
+                    won_column = false;
+                }
+            }
+            if (won_column) {
+                return true;
             }
         }
-    }
-    return std::optional<Point>();
-}
 
-Board::Board(int dim):
-    dim {dim},
-    board {std::vector(dim*dim, CellState::empty)}
-    {};
-
-CellState& Board::operator()(Point p) {
-    return board[p.x + dim * p.y];
-}
-
-void Board::print() {
-    for(int i : boost::irange(0, dim)) {
-        for (int j : boost::irange(0, dim)) {
-            printw("%c ", (*this)(Point(i, j)));
+        // Horizontals
+        for (int r : boost::irange(0, dim)) {
+            bool won_row = true;
+            for (int c : boost::irange(0, dim)) {
+                if ((*this)(Point(r, c)) != player) {
+                    won_row = false;
+                }
+            }
+            if (won_row) {
+                return true;
+            }
         }
-        printw("\n");
+
+        // Diagonals
+        bool d1 = true;
+        bool d2 = true;
+        for (int d : boost::irange(0, dim)) {
+            if ((*this)(Point(d, d)) != player) {
+                d1 = false;
+            }
+            if ((*this)(Point(dim - 1 - d, d)) != player) {
+                d2 = false;
+            }
+        }
+        return d1 || d2;
+    }
+
+    bool Board::valid(Point p) {
+        return (0 <= p.r) && (p.r < dim) && (0 <= p.c) && (p.c < dim);
+    }
+
+    Point Board::clamp(Point p) {
+        return Point(std::clamp(p.r, 0, dim - 1),
+                    std::clamp(p.c, 0, dim - 1));
     }
 }
-
-bool Board::valid(Point p) {
-    return (0 <= p.x) && (p.x < dim) && (0 <= p.y) && (p.y < dim);
-}
-
 int main(int argc, char *argv[]) {
+    using namespace TicTacToe;
     Board board = Board(3);
     Point active = Point(0, 0);
-    CellState player = CellState::x;
-    printw("Tic Tac Toe");
-    while (true) {
-
-    }
-}
-
-int main_old(int argc, char *argv[]) {
-    Board board = Board(3);
-    CellState player = CellState::x;
-    printw("Welcome to Tic Tac Toe\n");
-    while (true) {
-        game_loop:;
-        board.print();
-        printw("Player %c's turn", player);
-        std::string input;
-        std::getline(std::cin, input);
-        std::optional<Point> move_o = Point::from_string(input);
-        if (!move_o) {
-            printw("Invalid input %s", input);
-            goto game_loop;
-        }
-        Point move = move_o.value();
-        std::cout << "Move to " << move << std::endl;
-        if (!board.valid(move)) {
-            printw("Invalid coordinate\n");
-            goto game_loop;
-        }
-        if (board(move) != CellState::empty) {
-            printw("Square is not empty!\n");
-            goto game_loop;
-        }
-        board(move) = player;
-        printw("Success!\n");
-        player = player == CellState::x ? CellState::o : CellState::x;
-    }
-    return 0;
-}
-
-int main_demo(int argc, char *argv[]) {
-    int x = 0;
+    unsigned int frame = 0;
+    Player player = Player::x;
+    std::string title, info = "Select a move...";
+    
     initscr();
-    keypad(stdscr, TRUE);
+    nodelay(stdscr, true);
     noecho();
-    while (true) {
-        mvprintw(0, 0, "%d\n", x);
-        int ch = getch();
-        if (ch == KEY_LEFT || ch == KEY_DOWN) {
-            x -= 1;
-        } else if (ch == KEY_UP || ch == KEY_RIGHT) {
-            x += 1;
+    keypad(stdscr, true);
+    
+    while (board.winner() == Player::empty) {
+        std::ostringstream title_stream;
+        title_stream << (char) player << " turn";
+        title = title_stream.str();
+        mvaddstr(0, 0, title.c_str());
+        printw("\n");
+        board.print(active, (frame % 30) < 16);
+        mvprintw(1 + board.dim, 0, info.c_str());
+        printw("\n");
+        
+        int input = getch();
+        switch (input) {
+            case KEY_LEFT:
+            case 'a':
+                active.c -= 1;
+                break;
+            case KEY_RIGHT:
+            case 'd':
+                active.c += 1;
+                break;
+            case KEY_UP:
+            case 'w':
+                active.r -= 1;
+                break;
+            case KEY_DOWN:
+            case 's':
+                active.r += 1;
+                break;
+            case '\n':
+            case ' ':
+                if (board(active) == Player::empty) {
+                    board(active) = player;
+                    player = player == Player::x ? Player::o : Player::x;
+                    info = "Select a move...";
+                } else {
+                    info = "Invalid move!";
+                }
+                break;
         }
-        refresh();
-    }
-    endwin();
 
-    return 0;
+        flushinp();
+        refresh();
+        
+        frame += 1;
+        active = board.clamp(active);
+        
+        napms(16);
+    }
+    
+    std::ostringstream win_stream;
+    win_stream << "Player " << (char) board.winner() << " won!";
+    std::string win_message = win_stream.str();
+    mvprintw(1 + board.dim, 0, win_message.c_str());
+    
+    refresh();
+    timeout(-1);
+    getchar();
+    
+    endwin();
 }
